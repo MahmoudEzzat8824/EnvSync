@@ -1,9 +1,5 @@
 # EnvSync
 
-![CI](https://github.com/MahmoudEzzat8824/EnvSync/actions/workflows/test.yml/badge.svg)
-![License](https://img.shields.io/github/license/MahmoudEzzat8824/EnvSync)
-![Stars](https://img.shields.io/github/stars/MahmoudEzzat8824/EnvSync)
-
 Catch configuration bugs before they reach production.
 
 EnvSync is a lightweight CLI tool that detects configuration drift across environments (dev, staging, production) by comparing:
@@ -55,7 +51,48 @@ For secret keys, comparisons are made using SHA256 digests in memory and raw sec
 
 ```bash
 pip install envsync
-docker pull envsync/cli:latest
+```
+
+## Getting Started After Cloning (Windows, macOS, Linux)
+
+Clone and enter the repository:
+
+```bash
+git clone https://github.com/MahmoudEzzat8824/EnvSync.git
+cd EnvSync
+```
+
+### Linux / macOS
+
+```bash
+make install
+make run-help
+```
+
+### Windows (PowerShell)
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python -m pip install --upgrade pip
+.\.venv\Scripts\pip install -r requirements.txt
+.\.venv\Scripts\pip install -e .
+.\.venv\Scripts\envsync --help
+```
+
+### Optional: Developer Setup
+
+Linux / macOS:
+
+```bash
+make install-dev
+make test
+```
+
+Windows (PowerShell):
+
+```powershell
+.\.venv\Scripts\pip install -e .[dev]
+.\.venv\Scripts\python -m pytest -q
 ```
 
 ## Usage
@@ -66,10 +103,22 @@ docker pull envsync/cli:latest
 .venv/bin/envsync compare --env examples/dev.env --env examples/staging.env --env examples/prod.env
 ```
 
+Windows (PowerShell):
+
+```powershell
+.\.venv\Scripts\envsync compare --env examples/dev.env --env examples/staging.env --env examples/prod.env
+```
+
 ### Discovery Engine
 
 ```bash
 .venv/bin/envsync discover .
+```
+
+Windows (PowerShell):
+
+```powershell
+.\.venv\Scripts\envsync discover .
 ```
 
 ### Discovery + Template Generation
@@ -78,10 +127,22 @@ docker pull envsync/cli:latest
 .venv/bin/envsync discover . --generate-template
 ```
 
+Windows (PowerShell):
+
+```powershell
+.\.venv\Scripts\envsync discover . --generate-template
+```
+
 ### JSON Output
 
 ```bash
 .venv/bin/envsync compare --env examples/dev.env --env examples/staging.env --env examples/prod.env --json
+```
+
+Windows (PowerShell):
+
+```powershell
+.\.venv\Scripts\envsync compare --env examples/dev.env --env examples/staging.env --env examples/prod.env --json
 ```
 
 ## Example Output
@@ -143,15 +204,6 @@ EnvSync is:
 - CI/CD enforced
 
 Stop relying on human memory for critical configs.
-
-## CI/CD Integration (GitHub Actions)
-
-```yaml
-- name: Check config drift
-  run: envsync compare --env examples/dev.env --env examples/prod.env --fail-on-drift
-```
-
-If drift exists, the command exits non-zero and fails the workflow immediately.
 
 ## Input Types
 
@@ -227,7 +279,3 @@ Teams using early access are already:
 - Reducing config-related incidents
 - Tracking drift across multiple services
 - Automating compliance checks
-
-Join the early access list:
-
-- [Insert link to Google Form / Typeform here (Collect Name, Email, and Company Size)]
