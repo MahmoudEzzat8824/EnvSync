@@ -46,9 +46,9 @@ class DiscoveryRecord:
 
 
 def discover_command(
-	target_path: Path = typer.Argument(
-		Path("."),
-		help="Directory to scan recursively for env var usage.",
+	target_paths: list[Path] | None = typer.Argument(
+		None,
+		help="One or more files/directories to scan recursively for env var usage.",
 	),
 	generate_template: bool = typer.Option(
 		False,
@@ -57,18 +57,31 @@ def discover_command(
 	),
 ) -> None:
 	"""Discover environment variable usage across a workspace."""
-	path = target_path.resolve()
-	if not path.exists():
-		raise typer.BadParameter(f"Path does not exist: {target_path}")
+	resolved_paths = [path.resolve() for path in (target_paths or [Path(".")])]
+	for path in resolved_paths:
+		if not path.exists():
+			raise typer.BadParameter(f"Path does not exist: {path}")
 
-	discovery = discover_environment_variables(path)
+	discovery = discover_environment_variables_many(resolved_paths)
 	_render_discovery_table(discovery)
 
 	if generate_template:
-		template_dir = path if path.is_dir() else path.parent
-		template_path = template_dir / ".env.template"
-		write_template(template_path=template_path, variable_names=sorted(discovery.keys()))
-		Console().print(f"[green]Generated template:[/green] {template_path}")
+		for path in resolved_paths:
+			template_dir = path if path.is_dir() else path.parent
+			template_path = template_dir / ".env.template"
+			write_template(template_path=template_path, variable_names=sorted(discovery.keys()))
+			Console().print(f"[green]Generated template:[/green] {template_path}")
+
+
+def discover_environment_variables_many(paths: list[Path]) -> dict[str, DiscoveryRecord]:
+	"""Scan multiple paths and aggregate env variable usage."""
+	aggregated: dict[str, DiscoveryRecord] = {}
+	for path in paths:
+		for variable_name, record in discover_environment_variables(path).items():
+			target = aggregated.setdefault(variable_name, DiscoveryRecord())
+			target.reference_count += record.reference_count
+			target.extensions.update(record.extensions)
+	return aggregated
 
 
 def discover_environment_variables(root_path: Path) -> dict[str, DiscoveryRecord]:

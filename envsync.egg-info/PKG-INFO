@@ -5,16 +5,49 @@ Summary: CLI tool to detect configuration drift across environments
 Requires-Python: >=3.11
 Description-Content-Type: text/markdown
 Requires-Dist: typer<1.0.0,>=0.24.0
+Requires-Dist: rich<15.0.0,>=13.0.0
+Requires-Dist: questionary<3.0.0,>=2.1.0
 Requires-Dist: PyYAML<7.0.0,>=6.0.0
+Requires-Dist: python-dotenv<2.0.0,>=1.0.0
 Provides-Extra: dev
 Requires-Dist: pytest<10.0.0,>=9.0.0; extra == "dev"
 
 # EnvSync
 
-EnvSync is a Python CLI tool that detects configuration drift across environments by comparing:
+Catch configuration bugs before they reach production.
+
+EnvSync is a lightweight CLI tool that detects configuration drift across environments (dev, staging, production) by comparing:
 
 - `.env` files
 - Kubernetes ConfigMaps and Secrets (`.yml` / `.yaml`)
+- Source code references to environment variables across your workspace
+
+Prevent issues like:
+
+- "Works on staging but not production"
+- Missing environment variables
+- Misconfigured secrets
+- Silent config drift in Kubernetes
+
+Built for developers, DevOps engineers, and startups shipping fast.
+
+## Real-World Failures EnvSync Prevents
+
+- Missing `DATABASE_URL` in production leading to downtime
+- Wrong API endpoint causing broken integrations
+- Misconfigured secrets creating security risks
+- Drifted Kubernetes configs causing unpredictable behavior
+
+These issues are responsible for a large percentage of production incidents.
+EnvSync catches them before they happen.
+
+## Terminal Snapshots
+
+![alt text](media/image.png)
+
+![alt text](media/image-1.png)
+
+![alt text](media/image-2.png)
 
 It reports:
 
@@ -22,6 +55,7 @@ It reports:
 - Extra keys
 - Different values
 - Consistent values
+- Discovered runtime env variable references by language patterns
 
 For secret keys, comparisons are made using SHA256 digests in memory and raw secret values are never printed in the report.
 
@@ -29,11 +63,44 @@ For secret keys, comparisons are made using SHA256 digests in memory and raw sec
 
 - Python 3.11+
 
-## Quick Start
+## Virtual Environment Setup
+
+Use a virtual environment to avoid system Python restrictions (PEP 668) and keep dependencies isolated.
+
+### Linux / macOS
 
 ```bash
-make install-dev
-make test
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pip install -e .
+```
+
+### Windows (PowerShell)
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pip install -e .
+```
+
+### Initial Run Check (Interactive-First)
+
+Linux / macOS:
+
+```bash
+python3 main.py
+python3 main.py --help
+```
+
+Windows (PowerShell):
+
+```powershell
+py -3 main.py
+py -3 main.py --help
 ```
 
 ## Usage
@@ -41,14 +108,142 @@ make test
 ### Terminal Report
 
 ```bash
-.venv/bin/envsync compare --env dev.env --env staging.env --env prod.env
+python3 main.py compare --env examples/dev.env --env examples/staging.env --env examples/prod.env
+```
+
+Windows (PowerShell):
+
+```powershell
+py -3 main.py compare --env examples/dev.env --env examples/staging.env --env examples/prod.env
+```
+
+### Discovery Engine
+
+```bash
+python3 main.py discover [PATH ...]
+```
+
+Windows (PowerShell):
+
+```powershell
+py -3 main.py discover [PATH ...]
+```
+
+### Interactive CLI
+
+Start the wizard (menu-based flow ):
+
+```bash
+python3 main.py
+```
+
+Or explicitly:
+
+```bash
+python3 main.py interactive
+```
+
+Run interactive command with direct path(s) (skip menu and scan immediately):
+
+```bash
+python3 main.py interactive /absolute/path/to/project
+python3 main.py interactive /path/one /path/two --generate-template
+```
+
+### Script Mode (Path-First)
+
+You can run EnvSync like a script by passing path(s) directly to `main.py`:
+
+```bash
+python3 main.py /absolute/path/to/project
+python3 main.py /path/one /path/two
+```
+
+In this mode, EnvSync performs discovery on the provided path(s).
+
+### Discovery + Template Generation
+
+```bash
+python3 main.py discover [PATH ...] --generate-template
+```
+
+Windows (PowerShell):
+
+```powershell
+py -3 main.py discover [PATH ...] --generate-template
 ```
 
 ### JSON Output
 
 ```bash
-.venv/bin/envsync compare --env dev.env --env staging.env --env prod.env --json
+python3 main.py compare --env examples/dev.env --env examples/staging.env --env examples/prod.env --json
 ```
+
+Windows (PowerShell):
+
+```powershell
+py -3 main.py compare --env examples/dev.env --env examples/staging.env --env examples/prod.env --json
+```
+
+## Example Output
+
+```text
+EnvSync Drift Report
+====================
+Environments: dev, staging, prod
+Total keys discovered: 3
+
+Missing Keys
+------------
+dev: None
+staging: REDIS_URL
+prod: REDIS_URL
+
+Extra Keys
+----------
+dev: REDIS_URL
+staging: None
+prod: None
+
+Different Values
+----------------
+- API_BASE_URL
+
+Consistent Values
+-----------------
+- JWT_SECRET [secret]
+```
+
+## Why EnvSync?
+
+Most teams rely on manual checks or assumptions when managing environment configs.
+
+EnvSync gives you:
+
+- Instant drift detection across environments
+- Safe secret comparison (no leaks)
+- Fast CLI integration into CI/CD
+- Workspace-wide discovery of env variable usage
+- Automatic `.env.template` generation from real code usage
+- Extensible architecture (Terraform, Helm coming soon)
+
+Stop guessing. Know exactly what is different.
+
+## Why Not Just Use Manual Checks?
+
+Manual checks are:
+
+- Error-prone
+- Not scalable
+- Not CI/CD friendly
+
+EnvSync is:
+
+- Automated
+- Consistent
+- CI/CD enforced
+
+Stop relying on human memory for critical configs.
 
 ## Input Types
 
@@ -58,11 +253,37 @@ make test
   - `ConfigMap.binaryData`
   - `Secret.stringData`
   - `Secret.data` (base64 decoded)
+- Source files are recursively scanned to detect env variable calls in:
+  - Python: `os.getenv("VAR")`, `os.environ.get("VAR")`, `os.environ["VAR"]`, `Config("VAR")`
+  - Node.js / TypeScript: `process.env.VAR`, `process.env["VAR"]`
+  - Go: `os.Getenv("VAR")`
+  - PHP: `getenv('VAR')`, `$_ENV['VAR']`
 
-## Development Commands
+## Discovery Engine Details
 
-```bash
-make install-dev
-make test
-make run-help
+`python3 main.py discover [PATH ...]` scans one or more target paths (default `.`) and reports:
+
+- Environment variable name
+- Number of references found
+- Primary file extension where it appears most
+
+The scanner automatically ignores noisy directories such as:
+
+- `node_modules`
+- `.git`
+- `venv` / `.venv`
+- `__pycache__`
+- `build`
+- `dist`
+
+When `--generate-template` is provided, EnvSync writes discovered keys into `.env.template` in the target directory, for example:
+
+```dotenv
+DB_URL=
+API_KEY=
+JWT_SECRET=
 ```
+
+## Support and Feedback
+
+If this tool helps you, please star the repo and share feedback.

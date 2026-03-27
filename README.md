@@ -1,233 +1,224 @@
 # EnvSync
 
-Catch configuration bugs before they reach production.
+Detect config drift before it ships to production.
 
-EnvSync is a lightweight CLI tool that detects configuration drift across environments (dev, staging, production) by comparing:
+EnvSync is a CLI for teams that are done guessing whether environment config is actually consistent across dev, staging, and prod.
 
-- `.env` files
-- Kubernetes ConfigMaps and Secrets (`.yml` / `.yaml`)
-- Source code references to environment variables across your workspace
+## ⚡ Quick Demo (Under 10 Seconds)
 
-Prevent issues like:
+```bash
+envsync compare --env examples/dev.env --env examples/staging.env --env examples/prod.env
+```
 
-- "Works on staging but not production"
-- Missing environment variables
-- Misconfigured secrets
-- Silent config drift in Kubernetes
+You instantly get:
 
-Built for developers, DevOps engineers, and startups shipping fast.
+- Missing keys by environment
+- Extra keys by environment
+- Different values
+- Consistent values
 
-## Real-World Failures EnvSync Prevents
+No spreadsheets. No manual spot-checking. No "works on staging" surprises.
 
-- Missing `DATABASE_URL` in production leading to downtime
-- Wrong API endpoint causing broken integrations
-- Misconfigured secrets creating security risks
-- Drifted Kubernetes configs causing unpredictable behavior
+## 🚨 Why Teams Use It
 
-These issues are responsible for a large percentage of production incidents.
-EnvSync catches them before they happen.
+EnvSync is built to prevent real incidents, not produce vanity output.
 
-## Terminal Demo
+- Missing `DATABASE_URL` in production
+- Wrong API endpoint after partial rollout
+- Drifted Kubernetes config between clusters
+- Secret mismatch discovered too late
+
+If configuration is part of your release risk, this is your safety net.
+
+## 🔐 Security First
+
+Secrets are treated as sensitive by design:
+
+- Secret values are compared via SHA256 digests in memory
+- Raw secret values are never printed in terminal reports
+
+You get drift visibility without leaking credentials.
+
+## 📸 Terminal Snapshots
 
 ![alt text](media/image.png)
 
 ![alt text](media/image-1.png)
 
-It reports:
+![alt text](media/image-2.png)
 
-- Missing keys
-- Extra keys
-- Different values
-- Consistent values
-- Discovered runtime env variable references by language patterns
-
-For secret keys, comparisons are made using SHA256 digests in memory and raw secret values are never printed in the report.
-
-## Requirements
+## ✅ Requirements
 
 - Python 3.11+
 
-## Quick Start
-
-```bash
-pip install envsync
-```
-
-## Getting Started After Cloning (Windows, macOS, Linux)
-
-Clone and enter the repository:
+## 🚀 Setup After Cloning
 
 ```bash
 git clone https://github.com/MahmoudEzzat8824/EnvSync.git
 cd EnvSync
 ```
 
+Use a virtual environment to avoid system Python restrictions (PEP 668).
+
 ### Linux / macOS
 
 ```bash
-make install
-make run-help
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pip install -e .
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python -m pip install --upgrade pip
-.\.venv\Scripts\pip install -r requirements.txt
-.\.venv\Scripts\pip install -e .
-.\.venv\Scripts\envsync --help
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pip install -e .
 ```
 
-### Optional: Developer Setup
+### Initial Run Check (Interactive-First)
 
 Linux / macOS:
 
 ```bash
-make install-dev
-make test
+python3 main.py
+python3 main.py --help
 ```
 
 Windows (PowerShell):
 
 ```powershell
-.\.venv\Scripts\pip install -e .[dev]
-.\.venv\Scripts\python -m pytest -q
+py -3 main.py
+py -3 main.py --help
 ```
 
-## Usage
+## 🧑‍💻 Usage
 
-### Terminal Report
+### Compare Environments
 
 ```bash
-.venv/bin/envsync compare --env examples/dev.env --env examples/staging.env --env examples/prod.env
+envsync compare --env examples/dev.env --env examples/staging.env --env examples/prod.env
 ```
 
-Windows (PowerShell):
-
-```powershell
-.\.venv\Scripts\envsync compare --env examples/dev.env --env examples/staging.env --env examples/prod.env
-```
-
-### Discovery Engine
+JSON output:
 
 ```bash
-.venv/bin/envsync discover .
+envsync compare --env examples/dev.env --env examples/staging.env --env examples/prod.env --json
 ```
 
-Windows (PowerShell):
-
-```powershell
-.\.venv\Scripts\envsync discover .
-```
-
-### Discovery + Template Generation
+Fail CI when drift exists:
 
 ```bash
-.venv/bin/envsync discover . --generate-template
+envsync compare --env examples/dev.env --env examples/staging.env --env examples/prod.env --fail-on-drift
 ```
 
-Windows (PowerShell):
-
-```powershell
-.\.venv\Scripts\envsync discover . --generate-template
-```
-
-### JSON Output
+### Discover Variables in Code
 
 ```bash
-.venv/bin/envsync compare --env examples/dev.env --env examples/staging.env --env examples/prod.env --json
+envsync discover [PATH ...]
 ```
 
-Windows (PowerShell):
+Generate `.env.template`:
 
-```powershell
-.\.venv\Scripts\envsync compare --env examples/dev.env --env examples/staging.env --env examples/prod.env --json
+```bash
+envsync discover [PATH ...] --generate-template
 ```
 
-## Example Output
+### Interactive CLI
 
-```text
-EnvSync Drift Report
-====================
-Environments: dev, staging, prod
-Total keys discovered: 3
+Start wizard:
 
-Missing Keys
-------------
-dev: None
-staging: REDIS_URL
-prod: REDIS_URL
-
-Extra Keys
-----------
-dev: REDIS_URL
-staging: None
-prod: None
-
-Different Values
-----------------
-- API_BASE_URL
-
-Consistent Values
------------------
-- JWT_SECRET [secret]
+```bash
+envsync
 ```
 
-## Why EnvSync?
+Explicit interactive mode:
 
-Most teams rely on manual checks or assumptions when managing environment configs.
+```bash
+envsync interactive
+```
 
-EnvSync gives you:
+Interactive command with direct path(s) (skip menu, scan immediately):
 
-- Instant drift detection across environments
-- Safe secret comparison (no leaks)
-- Fast CLI integration into CI/CD
-- Workspace-wide discovery of env variable usage
-- Automatic `.env.template` generation from real code usage
-- Extensible architecture (Terraform, Helm coming soon)
+```bash
+envsync interactive /absolute/path/to/project
+envsync interactive /path/one /path/two --generate-template
+```
 
-Stop guessing. Know exactly what is different.
+### Script Mode (Path-First via `main.py`)
 
-## Why Not Just Use Manual Checks?
+```bash
+python3 main.py /absolute/path/to/project
+python3 main.py /path/one /path/two
+```
 
-Manual checks are:
+In script mode, EnvSync performs discovery on provided path(s).
 
-- Error-prone
-- Not scalable
-- Not CI/CD friendly
+## 🏗️ CI/CD Example (GitHub Actions)
 
-EnvSync is:
+Use EnvSync as a release gate:
 
-- Automated
-- Consistent
-- CI/CD enforced
+```yaml
+name: envsync-drift-check
+on:
+  pull_request:
+  push:
+    branches: [main]
 
-Stop relying on human memory for critical configs.
+jobs:
+  drift-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-## Input Types
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
 
-- `.env` files are parsed as plain key/value pairs.
-- `.yml` / `.yaml` files are parsed for Kubernetes:
+      - name: Install EnvSync
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Verify CLI
+        run: envsync --help
+
+      - name: Drift Gate
+        run: |
+          envsync compare \
+            --env examples/dev.env \
+            --env examples/staging.env \
+            --env examples/prod.env \
+            --fail-on-drift
+```
+
+Replace example paths with your real environment config files in CI.
+
+## 📦 Input Coverage
+
+EnvSync compares:
+
+- `.env` files as plain key/value pairs
+- Kubernetes `.yml` / `.yaml` manifests:
   - `ConfigMap.data`
   - `ConfigMap.binaryData`
   - `Secret.stringData`
   - `Secret.data` (base64 decoded)
-- Source files are recursively scanned to detect env variable calls in:
-  - Python: `os.getenv("VAR")`, `os.environ.get("VAR")`, `os.environ["VAR"]`, `Config("VAR")`
-  - Node.js / TypeScript: `process.env.VAR`, `process.env["VAR"]`
-  - Go: `os.Getenv("VAR")`
-  - PHP: `getenv('VAR')`, `$_ENV['VAR']`
 
-## Discovery Engine Details
+Discovery scans source code for environment usage patterns in:
 
-`envsync discover [PATH]` scans a target path (default `.`) and reports:
+- Python: `os.getenv("VAR")`, `os.environ.get("VAR")`, `os.environ["VAR"]`, `Config("VAR")`
+- Node.js / TypeScript: `process.env.VAR`, `process.env["VAR"]`
+- Go: `os.Getenv("VAR")`
+- PHP: `getenv('VAR')`, `$_ENV['VAR']`
 
-- Environment variable name
-- Number of references found
-- Primary file extension where it appears most
-
-The scanner automatically ignores noisy directories such as:
+Ignored directories during discovery:
 
 - `node_modules`
 - `.git`
@@ -236,46 +227,6 @@ The scanner automatically ignores noisy directories such as:
 - `build`
 - `dist`
 
-When `--generate-template` is provided, EnvSync writes discovered keys into `.env.template` in the target directory, for example:
+## ⭐ Support
 
-```dotenv
-DB_URL=
-API_KEY=
-JWT_SECRET=
-```
-
-## Development Commands
-
-```bash
-make install-dev
-make test
-make run-help
-```
-
-## Roadmap
-
-- [x] `.env` comparison
-- [x] Kubernetes ConfigMaps and Secrets
-- [x] Terminal and JSON reporting
-- [x] Workspace discovery engine for environment variable usage
-- [x] Automatic `.env.template` generation
-- [ ] Drift history tracking
-- [ ] Slack and email alerts
-- [ ] Terraform state comparison
-- [ ] Hosted dashboard (EnvSync Cloud)
-
-## Support and Feedback
-
-If this tool helps you, please star the repo and share feedback.
-
-Early users will get access to EnvSync Cloud for free.
-
-## EnvSync Cloud Early Access
-
-EnvSync Cloud is currently in development.
-
-Teams using early access are already:
-
-- Reducing config-related incidents
-- Tracking drift across multiple services
-- Automating compliance checks
+If EnvSync saves you from one bad deploy, star the repo and share it with your team.

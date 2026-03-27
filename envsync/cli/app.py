@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import typer
+from typer.models import ArgumentInfo, OptionInfo
 
 from envsync.cli.discover import discover_command
 from envsync.core.drift_detector import DriftReport, detect_drift
@@ -13,13 +14,64 @@ from envsync.parsers.env_parser import EnvParseError, parse_env_file
 from envsync.parsers.k8s_parser import K8sParseError, parse_k8s_yaml_file
 from envsync.utils.reporting import format_json_report, format_terminal_report
 
-app = typer.Typer(help="Detect configuration drift across environments.")
+app = typer.Typer(
+	help="Detect configuration drift across environments.",
+	invoke_without_command=True,
+)
 app.command("discover")(discover_command)
 
 
 @app.callback()
-def app_callback() -> None:
+def app_callback(ctx: typer.Context) -> None:
 	"""Top-level CLI callback for EnvSync."""
+	if ctx.invoked_subcommand is None:
+		_run_interactive_wizard()
+		raise typer.Exit(code=0)
+
+
+@app.command("interactive")
+def interactive_command(
+	target_paths: list[Path] | None = typer.Argument(
+		None,
+		help="Optional paths to scan directly in interactive mode.",
+	),
+	generate_template: bool = typer.Option(
+		False,
+		"--generate-template",
+		help="Write discovered variables to .env.template in each target path.",
+	),
+) -> None:
+	"""Start the interactive wizard or run discover directly with paths."""
+	# When called directly as a Python function, Typer default metadata objects
+	# may be passed through instead of resolved values.
+	if isinstance(target_paths, ArgumentInfo):
+		target_paths = None
+	if isinstance(generate_template, OptionInfo):
+		generate_template = False
+
+	if target_paths:
+		discover_command(target_paths=target_paths, generate_template=generate_template)
+		return
+
+	_run_interactive_wizard()
+
+
+def _run_interactive_wizard() -> None:
+	"""Load and run interactive wizard with a helpful dependency error."""
+	try:
+		from envsync.cli.wizard import run_interactive_wizard
+	except ModuleNotFoundError as exc:
+		if exc.name == "questionary":
+			raise typer.BadParameter(
+				"Interactive mode requires 'questionary'. Install dependencies with: "
+				"python3 -m pip install -r requirements.txt"
+			) from exc
+		raise
+
+	run_interactive_wizard(
+		compare_runner=compare_command,
+		discover_runner=discover_command,
+	)
 
 
 @app.command("compare")

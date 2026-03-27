@@ -1,4 +1,5 @@
 README.md
+main.py
 pyproject.toml
 envsync/__init__.py
 envsync.egg-info/PKG-INFO
@@ -9,6 +10,8 @@ envsync.egg-info/requires.txt
 envsync.egg-info/top_level.txt
 envsync/cli/__init__.py
 envsync/cli/app.py
+envsync/cli/discover.py
+envsync/cli/wizard.py
 envsync/core/__init__.py
 envsync/core/drift_detector.py
 envsync/models/__init__.py
@@ -17,6 +20,7 @@ envsync/parsers/__init__.py
 envsync/parsers/env_parser.py
 envsync/parsers/k8s_parser.py
 envsync/utils/__init__.py
+envsync/utils/constants.py
 envsync/utils/hashing.py
 envsync/utils/reporting.py
 tests/test_drift_detector.py

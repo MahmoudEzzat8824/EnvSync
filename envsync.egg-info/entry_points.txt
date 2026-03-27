@@ -1,2 +1,2 @@
 [console_scripts]
-envsync = envsync.cli.app:app
+envsync = main:app
