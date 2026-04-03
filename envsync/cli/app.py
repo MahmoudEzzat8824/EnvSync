@@ -77,7 +77,7 @@ def _run_interactive_wizard() -> None:
 @app.command("compare")
 def compare_command(
 	env_files: list[Path] = typer.Option(
-		..., "--env", help="Environment file path (.env, .yml, .yaml). Repeat for each env."
+		..., "--env", help="Environment file path (contains '.env', or .yml/.yaml). Repeat for each env."
 	),
 	json_output: bool = typer.Option(
 		False,
@@ -120,14 +120,14 @@ def _parse_environment_file(file_path: Path) -> ParsedVariables:
 	try:
 		if extension in {".yaml", ".yml"}:
 			return parse_k8s_yaml_file(file_path)
-		if extension == ".env":
+		if _is_env_like_file(file_path):
 			env_values = parse_env_file(file_path)
 			return {
 				key: ParsedVariable(value=value, is_secret=False)
 				for key, value in env_values.items()
 			}
 		raise typer.BadParameter(
-			f"Unsupported file type: {file_path}. Use .env, .yaml, or .yml"
+			f"Unsupported file type: {file_path}. Use files containing '.env', .yaml, or .yml"
 		)
 	except (FileNotFoundError, IsADirectoryError, EnvParseError, K8sParseError) as exc:
 		raise typer.BadParameter(str(exc)) from exc
@@ -135,13 +135,30 @@ def _parse_environment_file(file_path: Path) -> ParsedVariables:
 
 def _derive_environment_name(env_file: Path, index: int) -> str:
 	"""Build a readable environment label from an input file path."""
-	if env_file.suffix.lower() == ".env":
-		candidate = env_file.stem
+	if _is_env_like_file(env_file):
+		candidate = _derive_env_name_candidate(env_file.name)
 	else:
 		candidate = env_file.name.rsplit(".", 1)[0]
 
-	candidate = candidate.strip()
+	candidate = candidate.strip(" ._-")
 	return candidate if candidate else f"env{index}"
+
+
+def _is_env_like_file(file_path: Path) -> bool:
+	"""Return True when filename includes '.env' anywhere (case-insensitive)."""
+	return ".env" in file_path.name.lower()
+
+
+def _derive_env_name_candidate(filename: str) -> str:
+	"""Derive a readable environment label from env-style file names."""
+	lower_name = filename.lower()
+	if lower_name == ".env":
+		return "env"
+	if lower_name.startswith(".env."):
+		return filename[5:]
+	if lower_name.endswith(".env"):
+		return filename[:-4]
+	return Path(filename).stem
 
 
 def _ensure_unique_environment_names(

@@ -204,7 +204,7 @@ Replace example paths with your real environment config files in CI.
 
 EnvSync compares:
 
-- `.env` files as plain key/value pairs
+- Any file name containing `.env` (for example `prod.env`, `.env.local`, `service.env.backup`) as plain key/value pairs
 - Kubernetes `.yml` / `.yaml` manifests:
   - `ConfigMap.data`
   - `ConfigMap.binaryData`

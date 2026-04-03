@@ -81,8 +81,7 @@ def _collect_compare_paths(console: Console) -> list[Path]:
 
 	while True:
 		file_input = questionary.text(
-			"Enter environment file path (.env/.yaml/.yml):",
-			default="./",
+			"Enter environment file path (contains '.env' or .yaml/.yml):",
 		).ask()
 		if file_input is None:
 			return []
